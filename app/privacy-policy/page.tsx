@@ -1,16 +1,12 @@
 'use client';
 
 import { Button } from '../../components/ui/button';
-import Link from 'next/link'; // Import Link from Next.js
 
 export default function PrivacyPolicy() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 items-center sm:items-start text-center sm:text-left relative">
-        {/* Title */}
         <h1 className="text-4xl font-extrabold text-pink-500 z-10">Privacy Policy</h1>
-
-        {/* Privacy Policy Text */}
         <p className="text-xl text-accent-foreground z-10 max-w-lg mx-auto mt-4">
           At Mianna Photobooth, we value your privacy! This privacy policy explains how we collect, use, and protect your personal information.
         </p>

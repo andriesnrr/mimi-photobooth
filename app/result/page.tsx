@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
+
 export default function ResultPage() {
   const router = useRouter();
   const [photos, setPhotos] = useState<string[]>([]);

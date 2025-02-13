@@ -1,16 +1,12 @@
 'use client';
 
 import { Button } from '../../components/ui/button';
-import Link from 'next/link'; // Import Link from Next.js
 
 export default function About() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 items-center sm:items-start text-center sm:text-left relative">
-        {/* Title */}
         <h1 className="text-4xl font-extrabold text-pink-500 z-10">About Photobooth</h1>
-
-        {/* About Text */}
         <p className="text-xl text-accent-foreground z-10 max-w-lg mx-auto mt-4">
           I love photobooths, they capture the best candid moments! But since we can’t always find one nearby, I built this app to bring the experience to Mianna! 🎁
         </p>
