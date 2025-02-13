@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+}
+
+/* Pastel Pink Color Scheme with Darker Text */
+@layer base {
+  :root {
+    --background: #F9F5F6;
+    --foreground: #333333;
+    --primary: #FDCEDF;
+    --primary-foreground: #333333;
+    --secondary: #F8E8EE;
+    --secondary-foreground: #333333;
+    --accent: #F2BED1;
+    --accent-foreground: #333333;
+    --border: #F2BED1;
+    --input: #FDCEDF;
+    --ring: #F9F5F6;
+    --radius: 0.5rem;
+  }
+}
+
+/* Animation for countdown */
+@keyframes countdown {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.countdown-animation {
+  animation: countdown 1s ease-in-out;
+}
+
+/* Preview thumbnails */
+.preview-thumbnail {
+  transition: transform 0.3s ease;
+}
+
+.preview-thumbnail:hover {
+  transform: scale(1.05);
+}
+
+/* Flip animation */
+@keyframes flip {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(180deg); }
+}
+
+.flip-camera {
+  animation: flip 0.5s ease-in-out;
+}
