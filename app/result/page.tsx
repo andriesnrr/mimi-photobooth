@@ -10,7 +10,7 @@ export default function ResultPage() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [timestamp, setTimestamp] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewUrl, setPreviewUrl] = useState<string>(''); // Correctly using this now
   const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>('portrait');
 
   useEffect(() => {
@@ -29,6 +29,7 @@ export default function ResultPage() {
     }
   }, [router]);
 
+  // Portrait Canvas generation function
   const generatePortraitCanvas = async (photoArray: string[], time: string) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -41,7 +42,6 @@ export default function ResultPage() {
     const horizontalPadding = 40;
     const verticalPadding = 40;
     const spacing = 40;
-    const footerHeight = 120;
 
     canvas.width = baseWidth;
     canvas.height = baseHeight;
@@ -62,16 +62,16 @@ export default function ResultPage() {
     };
 
     const loadedImages = await Promise.all(photoArray.map(loadImage));
-    
+
     loadedImages.forEach((img, index) => {
       const yPos = verticalPadding + (index * (photoHeight + spacing));
-      
+
       // Add shadow effect
       ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
       ctx.shadowBlur = 15;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 5;
-      
+
       // Draw pink border with rounded corners
       ctx.fillStyle = '#FF6F61';
       ctx.beginPath();
@@ -83,26 +83,23 @@ export default function ResultPage() {
         8
       );
       ctx.fill();
-      
+
       // Reset shadow for image
       ctx.shadowColor = 'transparent';
-      
+
       // Draw image
       ctx.drawImage(img, horizontalPadding, yPos, photoWidth, photoHeight);
     });
 
-    // Calculate center position for text
+    // Add text
     const lastPhotoBottom = verticalPadding + (2 * (photoHeight + spacing)) + photoHeight;
     const remainingSpace = baseHeight - lastPhotoBottom;
     const textY = lastPhotoBottom + (remainingSpace / 2);
-    
-    // Add decorative elements
     ctx.fillStyle = '#FF6F61';
     ctx.beginPath();
     ctx.arc(baseWidth / 2, textY - 50, 3, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Draw text with shadow
+
     ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
     ctx.shadowBlur = 5;
     ctx.shadowOffsetX = 2;
@@ -119,6 +116,7 @@ export default function ResultPage() {
     return canvas.toDataURL('image/png');
   };
 
+  // Landscape Canvas generation function
   const generateLandscapeCanvas = async (photoArray: string[], time: string) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -127,7 +125,7 @@ export default function ResultPage() {
     const baseWidth = 1600;
     const baseHeight = 800;
     const photoWidth = Math.floor((baseWidth - 160) / 3);
-    const photoHeight = Math.floor(photoWidth * (9/16));
+    const photoHeight = Math.floor(photoWidth * (9 / 16));
     const horizontalPadding = 40;
     const verticalPadding = 80;
     const spacing = 40;
@@ -135,7 +133,6 @@ export default function ResultPage() {
     canvas.width = baseWidth;
     canvas.height = baseHeight;
 
-    // Fill background with gradient
     const gradient = ctx.createLinearGradient(0, 0, baseWidth, 0);
     gradient.addColorStop(0, '#FFE4E9');
     gradient.addColorStop(1, '#FFD1D9');
@@ -151,16 +148,16 @@ export default function ResultPage() {
     };
 
     const loadedImages = await Promise.all(photoArray.map(loadImage));
-    
+
     loadedImages.forEach((img, index) => {
       const xPos = horizontalPadding + (index * (photoWidth + spacing));
-      
+
       // Add shadow effect
       ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
       ctx.shadowBlur = 15;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 5;
-      
+
       // Draw pink border with rounded corners
       ctx.fillStyle = '#FF6F61';
       ctx.beginPath();
@@ -172,10 +169,10 @@ export default function ResultPage() {
         8
       );
       ctx.fill();
-      
+
       // Reset shadow for image
       ctx.shadowColor = 'transparent';
-      
+
       // Draw image
       ctx.drawImage(img, xPos, verticalPadding, photoWidth, photoHeight);
     });
@@ -183,14 +180,12 @@ export default function ResultPage() {
     const photosBottom = verticalPadding + photoHeight;
     const remainingSpace = baseHeight - photosBottom;
     const textY = photosBottom + (remainingSpace / 2);
-    
-    // Add decorative elements
+
     ctx.fillStyle = '#FF6F61';
     ctx.beginPath();
     ctx.arc(baseWidth / 2, textY - 50, 3, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Draw text with shadow
+
     ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
     ctx.shadowBlur = 5;
     ctx.shadowOffsetX = 2;
@@ -250,7 +245,7 @@ export default function ResultPage() {
         animate={{ y: 0 }}
         className="text-xl text-accent-foreground z-10 max-w-lg mx-auto mt-4 text-center"
       >
-        Your three snapshots are captured—no retakes, just real, fun memories. Now, it's time to save and share your moments.
+        Your three snapshots are captured—no retakes, just real, fun memories. Now, it&apos;s time to save and share your moments.
       </motion.p>
 
       {isReady && (
