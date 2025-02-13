@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '../components/ui/button';
-import Link from 'next/link'; // Import Link from Next.js
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export default function Home() {
@@ -18,10 +18,9 @@ export default function Home() {
         </motion.h1>
 
         <p className="text-xl text-accent-foreground z-10 mt-8 text-center max-w-md mx-auto">
-          You're the avocado to my toast!
+          You&apos;re the avocado to my toast!
         </p>
 
-        {/* Remove the pink circle and move the Start button to the center */}
         <Link href="/welcome">
           <Button
             className="mt-8 rounded-full bg-[#FF6F61] text-white py-3 px-10 text-xl font-semibold transition-colors hover:bg-[#D45746] mx-auto z-10"

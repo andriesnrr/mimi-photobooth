@@ -3,9 +3,14 @@
 import { Button } from '../../components/ui/button';
 import { useState, useEffect, useRef } from 'react';
 import Webcam from 'react-webcam';
-import { Camera, RefreshCcw } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+
+interface WebcamComponentProps extends Webcam {
+  getScreenshot: () => string | null;
+}
 
 export default function Welcome() {
   const router = useRouter();
@@ -13,7 +18,7 @@ export default function Welcome() {
   const [currentShot, setCurrentShot] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
-  const webcamRef = useRef<any>(null);
+  const webcamRef = useRef<WebcamComponentProps | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [isFlipping, setIsFlipping] = useState(false);
 
@@ -115,6 +120,7 @@ export default function Welcome() {
               animate={{ opacity: 1, scale: 1 }}
               className="preview-thumbnail"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photo}
                 alt={`Preview ${index + 1}`}
