@@ -120,10 +120,11 @@ export default function Welcome() {
               animate={{ opacity: 1, scale: 1 }}
               className="preview-thumbnail"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={photo}
                 alt={`Preview ${index + 1}`}
+                width={192}
+                height={128}
                 className="w-full h-32 object-cover rounded-lg border-2 border-pink-500"
               />
             </motion.div>

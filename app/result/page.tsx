@@ -5,13 +5,12 @@ import { Button } from '../../components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
-
 export default function ResultPage() {
   const router = useRouter();
   const [photos, setPhotos] = useState<string[]>([]);
   const [timestamp, setTimestamp] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>(''); // Correctly using this now
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>('portrait');
 
   useEffect(() => {
@@ -30,7 +29,6 @@ export default function ResultPage() {
     }
   }, [router]);
 
-  // Portrait Canvas generation function
   const generatePortraitCanvas = async (photoArray: string[], time: string) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -47,7 +45,6 @@ export default function ResultPage() {
     canvas.width = baseWidth;
     canvas.height = baseHeight;
 
-    // Fill pastel pink background with gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, baseHeight);
     gradient.addColorStop(0, '#FFE4E9');
     gradient.addColorStop(1, '#FFD1D9');
@@ -67,13 +64,11 @@ export default function ResultPage() {
     loadedImages.forEach((img, index) => {
       const yPos = verticalPadding + (index * (photoHeight + spacing));
 
-      // Add shadow effect
       ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
       ctx.shadowBlur = 15;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 5;
 
-      // Draw pink border with rounded corners
       ctx.fillStyle = '#FF6F61';
       ctx.beginPath();
       ctx.roundRect(
@@ -85,17 +80,14 @@ export default function ResultPage() {
       );
       ctx.fill();
 
-      // Reset shadow for image
       ctx.shadowColor = 'transparent';
-
-      // Draw image
       ctx.drawImage(img, horizontalPadding, yPos, photoWidth, photoHeight);
     });
 
-    // Add text
     const lastPhotoBottom = verticalPadding + (2 * (photoHeight + spacing)) + photoHeight;
     const remainingSpace = baseHeight - lastPhotoBottom;
     const textY = lastPhotoBottom + (remainingSpace / 2);
+
     ctx.fillStyle = '#FF6F61';
     ctx.beginPath();
     ctx.arc(baseWidth / 2, textY - 50, 3, 0, Math.PI * 2);
@@ -117,7 +109,6 @@ export default function ResultPage() {
     return canvas.toDataURL('image/png');
   };
 
-  // Landscape Canvas generation function
   const generateLandscapeCanvas = async (photoArray: string[], time: string) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -153,13 +144,11 @@ export default function ResultPage() {
     loadedImages.forEach((img, index) => {
       const xPos = horizontalPadding + (index * (photoWidth + spacing));
 
-      // Add shadow effect
       ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
       ctx.shadowBlur = 15;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 5;
 
-      // Draw pink border with rounded corners
       ctx.fillStyle = '#FF6F61';
       ctx.beginPath();
       ctx.roundRect(
@@ -171,10 +160,7 @@ export default function ResultPage() {
       );
       ctx.fill();
 
-      // Reset shadow for image
       ctx.shadowColor = 'transparent';
-
-      // Draw image
       ctx.drawImage(img, xPos, verticalPadding, photoWidth, photoHeight);
     });
 
@@ -260,6 +246,7 @@ export default function ResultPage() {
               layoutId="preview"
               className="relative max-w-[90vw] border-4 border-pink-500 rounded-lg overflow-hidden shadow-lg"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt="Generated photobooth result"
