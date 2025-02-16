@@ -66,9 +66,9 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
       onScale?.(sticker.id, newScale);
       setStartGestureDistance(newDistance);
     }
-  }, [startGestureDistance, sticker.scale, onScale]);
+  }, [startGestureDistance, sticker.scale, sticker.id, onScale]);
 
-  const handleTouchStart = (e: TouchEvent) => {
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     if (e.touches.length === 2) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
@@ -78,11 +78,11 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
       );
       setStartGestureDistance(distance);
     }
-  };
+  }, []);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     setStartGestureDistance(null);
-  };
+  }, []);
 
   const handleRotate = () => {
     const newRotation = (rotation + 45) % 360;
@@ -103,7 +103,7 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
       element.removeEventListener('touchmove', handleTouchMove);
       element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [containerRef, handleTouchMove]);
+  }, [containerRef, handleTouchMove, handleTouchStart, handleTouchEnd]);
 
   if (!stickerInfo) return null;
 

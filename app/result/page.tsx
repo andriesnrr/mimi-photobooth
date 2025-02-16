@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef, RefObject } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { frameColors, availableStickers } from './constants';
 import { ColorSelector, StickerSelector, FormatButtons } from './components';
 import { DraggableSticker } from './components/DraggableSticker';
@@ -19,41 +20,53 @@ export default function ResultPage() {
   const [timestamp, setTimestamp] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>('portrait');
+  const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>(
+    localStorage.getItem('photoFormat') as 'portrait' | 'landscape' || 'portrait'
+  );
   const [selectedColor, setSelectedColor] = useState<FrameColor>(frameColors[0]);
   const [stickers, setStickers] = useState<Sticker[]>([]);
 
   useEffect(() => {
-    try {
-      const savedPhotos = JSON.parse(localStorage.getItem('photos') || '[]');
-      const savedTimestamp = localStorage.getItem('timestamp');
-      const savedCount = parseInt(localStorage.getItem('photoCount') || '0');
+    const loadInitialData = async () => {
+      try {
+        const savedPhotos = JSON.parse(localStorage.getItem('photos') || '[]');
+        const savedTimestamp = localStorage.getItem('timestamp');
+        const savedCount = parseInt(localStorage.getItem('photoCount') || '0');
+        const savedFormat = localStorage.getItem('photoFormat') as 'portrait' | 'landscape';
 
-      if (savedPhotos.length > 0 && savedCount > 0) {
-        setPhotos(savedPhotos);
-        setPhotoCount(savedCount);
-        setTimestamp(savedTimestamp || new Date().toLocaleString());
-        setIsReady(true);
-        void generatePortraitCanvas(savedPhotos, savedCount, savedTimestamp || '', selectedColor, stickers).then(url => {
+        if (savedPhotos.length > 0 && savedCount > 0) {
+          setPhotos(savedPhotos);
+          setPhotoCount(savedCount);
+          setCurrentFormat(savedFormat || 'portrait');
+          setTimestamp(savedTimestamp || new Date().toLocaleString());
+          setIsReady(true);
+
+          const generateCanvas = savedFormat === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
+          const url = await generateCanvas(savedPhotos, savedCount, savedTimestamp || '', selectedColor, stickers);
           if (url) setPreviewUrl(url);
-        });
-      } else {
-        void router.push('/');
+        } else {
+          await router.push('/');
+        }
+      } catch (error) {
+        console.error('Error loading saved data:', error);
+        await router.push('/');
       }
-    } catch (error) {
-      console.error('Error loading saved data:', error);
-      void router.push('/');
-    }
-  }, [router]);
+    };
+
+    void loadInitialData();
+  }, [router, selectedColor, stickers]);
+
+  const regenerateCanvas = async () => {
+    const generateCanvas = currentFormat === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
+    const url = await generateCanvas(photos, photoCount, timestamp, selectedColor, stickers);
+    if (url) setPreviewUrl(url);
+  };
 
   useEffect(() => {
     if (isReady) {
-      const generateCanvas = currentFormat === 'portrait' ? generatePortraitCanvas : generateLandscapeCanvas;
-      void generateCanvas(photos, photoCount, timestamp, selectedColor, stickers).then(url => {
-        if (url) setPreviewUrl(url);
-      });
+      void regenerateCanvas();
     }
-  }, [selectedColor, stickers, currentFormat, isReady, photos, photoCount, timestamp]);
+  }, [currentFormat, selectedColor, stickers, isReady]);
 
   const addSticker = (type: string) => {
     const newSticker: Sticker = {
@@ -96,7 +109,7 @@ export default function ResultPage() {
   const downloadImage = async (format: 'portrait' | 'landscape') => {
     try {
       setCurrentFormat(format);
-      const generateCanvas = format === 'portrait' ? generatePortraitCanvas : generateLandscapeCanvas;
+      const generateCanvas = format === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
       const dataUrl = await generateCanvas(photos, photoCount, timestamp, selectedColor, stickers);
       
       if (dataUrl) {
@@ -112,16 +125,21 @@ export default function ResultPage() {
     }
   };
 
-  const handleNewPhotos = () => {
+  const handleNewPhotos = async () => {
     try {
       localStorage.removeItem('photos');
       localStorage.removeItem('timestamp');
       localStorage.removeItem('photoCount');
-      void router.push('/welcome');
+      localStorage.removeItem('photoFormat');
+      await router.push('/welcome');
     } catch (error) {
       console.error('Error clearing data:', error);
     }
   };
+
+  if (!isReady) {
+    return null;
+  }
 
   return (
     <motion.div 
@@ -147,104 +165,102 @@ export default function ResultPage() {
         just real, fun memories. Now, customize your design and save your moments!
       </motion.p>
 
-      {isReady && (
-        <motion.div 
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          className="w-full max-w-4xl"
-        >
-          <div className="flex flex-col items-center gap-8">
-            {/* Preview with Draggable Stickers */}
-            <div 
-              className="relative"
-              ref={previewRef}
+      <motion.div 
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        className="w-full max-w-4xl"
+      >
+        <div className="flex flex-col items-center gap-8">
+          <div 
+            className="relative"
+            ref={previewRef}
+          >
+            <motion.div 
+              layoutId="preview"
+              className="relative max-w-[90vw] border-4 border-pink-500 rounded-lg overflow-hidden shadow-lg"
             >
-              <motion.div 
-                layoutId="preview"
-                className="relative max-w-[90vw] border-4 border-pink-500 rounded-lg overflow-hidden shadow-lg"
-              >
-                <img
+              {previewUrl && (
+                <Image
                   src={previewUrl}
                   alt="Generated photobooth result"
+                  width={1080}
+                  height={1920}
                   className="w-full h-auto"
+                  priority
+                  unoptimized
                 />
-                {stickers.map(sticker => (
-                  <DraggableSticker
-                    key={sticker.id}
-                    sticker={sticker}
-                    containerRef={previewRef}
-                    onPositionUpdate={updateStickerPosition}
-                    onDelete={deleteSticker}
-                    onRotate={updateStickerRotation}
-                    onScale={updateStickerScale}
-                  />
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Customization Controls */}
-            <div className="w-full max-w-3xl space-y-6">
-              {/* Color Selection */}
-              <div className="bg-white p-6 rounded-xl shadow-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Frame Color</h3>
-                <ColorSelector 
-                  colors={frameColors}
-                  selectedColor={selectedColor}
-                  onColorSelect={setSelectedColor}
+              )}
+              {stickers.map(sticker => (
+                <DraggableSticker
+                  key={sticker.id}
+                  sticker={sticker}
+                  containerRef={previewRef}
+                  onPositionUpdate={updateStickerPosition}
+                  onDelete={deleteSticker}
+                  onRotate={updateStickerRotation}
+                  onScale={updateStickerScale}
                 />
-              </div>
-
-              {/* Stickers */}
-              <div className="bg-white p-6 rounded-xl shadow-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Stickers</h3>
-                  {stickers.length > 0 && (
-                    <Button
-                      onClick={clearAllStickers}
-                      className="text-red-500 hover:text-red-700 flex items-center gap-2"
-                      variant="ghost"
-                    >
-                      <Trash2 size={16} />
-                      Clear All
-                    </Button>
-                  )}
-                </div>
-                <StickerSelector 
-                  stickers={availableStickers}
-                  onStickerSelect={addSticker}
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Tip: Double-click a sticker to remove it, or drag to reposition. 
-                  Use two fingers to pinch and zoom on mobile.
-                </p>
-              </div>
-
-              {/* Download Options */}
-              <div className="bg-white p-6 rounded-xl shadow-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Download Options</h3>
-                <FormatButtons 
-                  currentFormat={currentFormat}
-                  onDownload={downloadImage}
-                />
-              </div>
-            </div>
-
-            {/* Take New Photos Button */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <Button
-                className="mt-4 rounded-full bg-transparent text-pink-500 border-2 border-pink-500 py-2 px-8 text-lg font-semibold transition-colors hover:bg-pink-50"
-                onClick={handleNewPhotos}
-              >
-                Take New Photos
-              </Button>
+              ))}
             </motion.div>
           </div>
-        </motion.div>
-      )}
+
+          <div className="w-full max-w-3xl space-y-6">
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Frame Color</h3>
+              <ColorSelector 
+                colors={frameColors}
+                selectedColor={selectedColor}
+                onColorSelect={setSelectedColor}
+              />
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Stickers</h3>
+                {stickers.length > 0 && (
+                  <Button
+                    onClick={clearAllStickers}
+                    className="text-red-500 hover:text-red-700 flex items-center gap-2"
+                    variant="ghost"
+                  >
+                    <Trash2 size={16} />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+              <StickerSelector 
+                stickers={availableStickers}
+                onStickerSelect={addSticker}
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Tip: Double-click a sticker to remove it, or drag to reposition. 
+                Use two fingers to pinch and zoom on mobile.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Download Options</h3>
+              <FormatButtons 
+                currentFormat={currentFormat}
+                onDownload={downloadImage}
+              />
+            </div>
+          </div>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Button
+              className="mt-4 rounded-full bg-transparent text-pink-500 border-2 border-pink-500 py-2 px-8 text-lg font-semibold transition-colors hover:bg-pink-50"
+              onClick={handleNewPhotos}
+            >
+              Take New Photos
+            </Button>
+          </motion.div>
+        </div>
+      </motion.div>
 
       <motion.footer
         initial={{ opacity: 0 }}

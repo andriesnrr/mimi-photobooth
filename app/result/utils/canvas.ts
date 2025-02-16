@@ -1,9 +1,9 @@
-import { FrameColor, Sticker } from '../types';
+import type { Sticker } from '../types';
 import { availableStickers } from '../constants';
 
 export const drawDiagonalStripes = (
-  ctx: CanvasRenderingContext2D, 
-  width: number, 
+  ctx: CanvasRenderingContext2D,
+  width: number,
   height: number,
   color: string
 ) => {
@@ -26,9 +26,9 @@ export const drawDiagonalStripes = (
 };
 
 export const drawSticker = (
-  ctx: CanvasRenderingContext2D, 
-  sticker: Sticker, 
-  canvasWidth: number, 
+  ctx: CanvasRenderingContext2D,
+  sticker: Sticker,
+  canvasWidth: number,
   canvasHeight: number
 ) => {
   const stickerInfo = availableStickers.find(s => s.type === sticker.type);
@@ -50,13 +50,17 @@ export const drawSticker = (
     case 'star':
       drawStar(ctx, 0, 0, 20, 5);
       break;
-    // Add more sticker drawing functions
   }
 
   ctx.restore();
 };
 
-export const drawHeart = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
+export const drawHeart = (
+  ctx: CanvasRenderingContext2D, 
+  x: number, 
+  y: number, 
+  size: number
+) => {
   ctx.beginPath();
   ctx.moveTo(x, y + size / 4);
   ctx.quadraticCurveTo(x, y, x + size / 4, y);
@@ -70,18 +74,21 @@ export const drawHeart = (ctx: CanvasRenderingContext2D, x: number, y: number, s
 };
 
 export const drawStar = (
-  ctx: CanvasRenderingContext2D, 
-  x: number, 
-  y: number, 
-  size: number, 
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
   points: number
 ) => {
   ctx.beginPath();
   for (let i = 0; i < points * 2; i++) {
     const radius = i % 2 === 0 ? size : size / 2;
     const angle = (i * Math.PI) / points;
-    if (i === 0) ctx.moveTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
-    else ctx.lineTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
+    if (i === 0) {
+      ctx.moveTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
+    } else {
+      ctx.lineTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
+    }
   }
   ctx.closePath();
   ctx.fill();
