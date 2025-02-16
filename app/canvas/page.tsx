@@ -27,8 +27,31 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
   rotation,
   facingMode 
 }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const getScreenshot = useCallback((): string | null => {
+    if (!videoRef.current || !canvasRef.current) return null;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((rotation * Math.PI) / 180);
+      if (isMirrored) ctx.scale(-1, 1);
+      ctx.translate(-canvas.width / 2, -canvas.height / 2);
+      ctx.drawImage(video, 0, 0);
+      ctx.restore();
+      
+      return canvas.toDataURL('image/jpeg', 1.0);
+    }
+    return null;
+  }, [rotation, isMirrored]);
 
   useEffect(() => {
     let mounted = true;
@@ -69,29 +92,6 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
     };
   }, [facingMode]);
 
-  const getScreenshot = useCallback((): string | null => {
-    if (!videoRef.current || !canvasRef.current) return null;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    
-    if (ctx) {
-      ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((rotation * Math.PI) / 180);
-      if (isMirrored) ctx.scale(-1, 1);
-      ctx.translate(-canvas.width / 2, -canvas.height / 2);
-      ctx.drawImage(video, 0, 0);
-      ctx.restore();
-      
-      return canvas.toDataURL('image/jpeg');
-    }
-    return null;
-  }, [rotation, isMirrored]);
-
   useEffect(() => {
     if (isCapturing && timeLeft === 0) {
       const photo = getScreenshot();
@@ -124,22 +124,28 @@ const DynamicCamera = dynamic(() => Promise.resolve(CameraComponent), {
 
 export default function Canvas() {
   const router = useRouter();
-  const [photoCount, setPhotoCount] = useState(3);
-  const [timeLeft, setTimeLeft] = useState(3);
-  const [currentShot, setCurrentShot] = useState(0);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [photoCount, setPhotoCount] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(3);
+  const [currentShot, setCurrentShot] = useState<number>(0);
+  const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
-  const [isMirrored, setIsMirrored] = useState(false);
-  const [rotation, setRotation] = useState(0);
+  const [isMirrored, setIsMirrored] = useState<boolean>(false);
+  const [rotation, setRotation] = useState<number>(0);
 
   useEffect(() => {
-    const savedCount = localStorage.getItem('photoCount');
-    if (savedCount) {
-      setPhotoCount(parseInt(savedCount));
-    } else {
-      void router.push('/welcome');
-    }
+    const loadSavedCount = async () => {
+      if (typeof window === 'undefined') return;
+
+      const savedCount = localStorage.getItem('photoCount');
+      if (savedCount) {
+        setPhotoCount(parseInt(savedCount));
+      } else {
+        await router.push('/welcome');
+      }
+    };
+
+    void loadSavedCount();
   }, [router]);
 
   const handlePhotoCapture = useCallback((photo: string) => {
@@ -261,6 +267,7 @@ export default function Canvas() {
               <button
                 className="rounded-full bg-[#FF6F61] text-white py-2 px-6 md:py-3 md:px-10 text-base md:text-xl font-semibold transition-colors hover:bg-[#D45746] flex items-center gap-2"
                 onClick={startCountdown}
+                type="button"
               >
                 <Camera className="w-5 h-5 md:w-6 md:h-6" />
                 <span className="hidden sm:inline">Start Countdown</span>
@@ -270,6 +277,7 @@ export default function Canvas() {
                 className="rounded-full bg-[#FF6F61] text-white p-2 md:p-3 transition-colors hover:bg-[#D45746]"
                 onClick={flipCamera}
                 title="Flip Camera"
+                type="button"
               >
                 <RefreshCcw className="w-5 h-5 md:w-6 md:h-6" />
               </button>
@@ -278,6 +286,7 @@ export default function Canvas() {
                 className="rounded-full bg-[#FF6F61] text-white p-2 md:p-3 transition-colors hover:bg-[#D45746]"
                 onClick={toggleMirror}
                 title="Mirror Camera"
+                type="button"
               >
                 <FlipHorizontal className="w-5 h-5 md:w-6 md:h-6" />
               </button>
@@ -286,6 +295,7 @@ export default function Canvas() {
                 className="rounded-full bg-[#FF6F61] text-white p-2 md:p-3 transition-colors hover:bg-[#D45746]"
                 onClick={rotateCamera}
                 title="Rotate Camera"
+                type="button"
               >
                 <RotateCcw className="w-5 h-5 md:w-6 md:h-6" />
               </button>
@@ -296,6 +306,7 @@ export default function Canvas() {
             <button
               className="rounded-full bg-[#FF6F61] text-white py-2 px-6 md:py-3 md:px-10 text-base md:text-xl font-semibold transition-colors hover:bg-[#D45746]"
               onClick={handleDone}
+              type="button"
             >
               Done
             </button>

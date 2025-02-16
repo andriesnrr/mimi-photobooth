@@ -20,21 +20,23 @@ export default function ResultPage() {
   const [timestamp, setTimestamp] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>(
-    localStorage.getItem('photoFormat') as 'portrait' | 'landscape' || 'portrait'
-  );
+  const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>('portrait');
   const [selectedColor, setSelectedColor] = useState<FrameColor>(frameColors[0]);
   const [stickers, setStickers] = useState<Sticker[]>([]);
 
   const regenerateCanvas = useCallback(async () => {
+    if (!isReady) return;
+
     const generateCanvas = currentFormat === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
     const url = await generateCanvas(photos, photoCount, timestamp, selectedColor, stickers);
     if (url) setPreviewUrl(url);
-  }, [currentFormat, photos, photoCount, timestamp, selectedColor, stickers]);
+  }, [currentFormat, photos, photoCount, timestamp, selectedColor, stickers, isReady]);
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        if (typeof window === 'undefined') return;
+
         const savedPhotos = JSON.parse(localStorage.getItem('photos') || '[]');
         const savedTimestamp = localStorage.getItem('timestamp');
         const savedCount = parseInt(localStorage.getItem('photoCount') || '0');
@@ -43,21 +45,22 @@ export default function ResultPage() {
         if (savedPhotos.length > 0 && savedCount > 0) {
           setPhotos(savedPhotos);
           setPhotoCount(savedCount);
-          setCurrentFormat(savedFormat || 'portrait');
+          if (savedFormat) {
+            setCurrentFormat(savedFormat);
+          }
           setTimestamp(savedTimestamp || new Date().toLocaleString());
           setIsReady(true);
-          await regenerateCanvas();
         } else {
-          await router.push('/');
+          await router.push('/welcome');
         }
       } catch (error) {
         console.error('Error loading saved data:', error);
-        await router.push('/');
+        await router.push('/welcome');
       }
     };
 
     void loadInitialData();
-  }, [router, regenerateCanvas]);
+  }, [router]);
 
   useEffect(() => {
     if (isReady) {
@@ -124,6 +127,8 @@ export default function ResultPage() {
 
   const handleNewPhotos = useCallback(async () => {
     try {
+      if (typeof window === 'undefined') return;
+      
       localStorage.removeItem('photos');
       localStorage.removeItem('timestamp');
       localStorage.removeItem('photoCount');
