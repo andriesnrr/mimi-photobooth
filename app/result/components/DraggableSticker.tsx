@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, PanInfo } from 'framer-motion';
 import { Sticker } from '../types';
 import { availableStickers } from '../constants';
 
@@ -34,7 +34,7 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
     setScale(sticker.scale);
   }, [sticker]);
 
-  const handleDrag = (_: any, info: any) => {
+  const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -42,8 +42,7 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
     const x = (info.point.x - rect.left) / rect.width;
     const y = (info.point.y - rect.top) / rect.height;
     
-    // Constrain within bounds with padding
-    const padding = 0.1; // 10% padding
+    const padding = 0.1;
     const boundedX = Math.max(padding, Math.min(1 - padding, x));
     const boundedY = Math.max(padding, Math.min(1 - padding, y));
     
@@ -51,19 +50,7 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
     onPositionUpdate(sticker.id, boundedX, boundedY);
   };
 
-  const handleTouchStart = (e: TouchEvent) => {
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      setStartGestureDistance(distance);
-    }
-  };
-
-  const handleTouchMove = (e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (e.touches.length === 2 && startGestureDistance !== null) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
@@ -78,6 +65,18 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
       setScale(newScale);
       onScale?.(sticker.id, newScale);
       setStartGestureDistance(newDistance);
+    }
+  }, [startGestureDistance, sticker.scale, onScale]);
+
+  const handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      setStartGestureDistance(distance);
     }
   };
 
@@ -104,7 +103,7 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
       element.removeEventListener('touchmove', handleTouchMove);
       element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [containerRef, sticker.scale]);
+  }, [containerRef, handleTouchMove]);
 
   if (!stickerInfo) return null;
 
@@ -130,7 +129,6 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
         className={`relative group ${isDragging ? 'opacity-80' : 'opacity-100'}`}
         onDoubleClick={() => onDelete(sticker.id)}
       >
-        {/* Controls */}
         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 hidden group-hover:flex gap-1">
           <button
             onClick={handleRotate}
@@ -172,7 +170,6 @@ export const DraggableSticker: React.FC<DraggableStickerProps> = ({
           </button>
         </div>
 
-        {/* Sticker */}
         <div 
           className="w-12 h-12 flex items-center justify-center"
           style={{ color: stickerInfo.color }}
