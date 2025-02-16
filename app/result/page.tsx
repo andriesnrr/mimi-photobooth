@@ -1,215 +1,126 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button } from '../../components/ui/button';
+import { useEffect, useState, useRef, RefObject } from 'react';
+import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { frameColors, availableStickers } from './constants';
+import { ColorSelector, StickerSelector, FormatButtons } from './components';
+import { DraggableSticker } from './components/DraggableSticker';
+import { generatePortraitCanvas, generateLandscapeCanvas } from './utils/generator';
+import type { FrameColor, Sticker } from './types';
+import { Trash2 } from 'lucide-react';
 
 export default function ResultPage() {
   const router = useRouter();
+  const previewRef = useRef<HTMLDivElement>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photoCount, setPhotoCount] = useState<number>(0);
   const [timestamp, setTimestamp] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [currentFormat, setCurrentFormat] = useState<'portrait' | 'landscape'>('portrait');
+  const [selectedColor, setSelectedColor] = useState<FrameColor>(frameColors[0]);
+  const [stickers, setStickers] = useState<Sticker[]>([]);
 
   useEffect(() => {
-    const savedPhotos = JSON.parse(localStorage.getItem('photos') || '[]');
-    const savedTimestamp = localStorage.getItem('timestamp');
+    try {
+      const savedPhotos = JSON.parse(localStorage.getItem('photos') || '[]');
+      const savedTimestamp = localStorage.getItem('timestamp');
+      const savedCount = parseInt(localStorage.getItem('photoCount') || '0');
 
-    if (savedPhotos.length > 0) {
-      setPhotos(savedPhotos);
-      setTimestamp(savedTimestamp || '');
-      setIsReady(true);
-      generatePortraitCanvas(savedPhotos, savedTimestamp || '').then(url => {
-        if (url) setPreviewUrl(url);
-      });
-    } else {
-      router.push('/');
+      if (savedPhotos.length > 0 && savedCount > 0) {
+        setPhotos(savedPhotos);
+        setPhotoCount(savedCount);
+        setTimestamp(savedTimestamp || new Date().toLocaleString());
+        setIsReady(true);
+        void generatePortraitCanvas(savedPhotos, savedCount, savedTimestamp || '', selectedColor, stickers).then(url => {
+          if (url) setPreviewUrl(url);
+        });
+      } else {
+        void router.push('/');
+      }
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+      void router.push('/');
     }
   }, [router]);
 
-  const generatePortraitCanvas = async (photoArray: string[], time: string) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    const baseWidth = 800;
-    const baseHeight = 1600;
-    const photoWidth = baseWidth - 80;
-    const photoHeight = Math.floor(photoWidth * (9/16));
-    const horizontalPadding = 40;
-    const verticalPadding = 40;
-    const spacing = 40;
-
-    canvas.width = baseWidth;
-    canvas.height = baseHeight;
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, baseHeight);
-    gradient.addColorStop(0, '#FFE4E9');
-    gradient.addColorStop(1, '#FFD1D9');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, baseWidth, baseHeight);
-
-    const loadImage = (src: string) => {
-      return new Promise<HTMLImageElement>((resolve) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = () => resolve(img);
+  useEffect(() => {
+    if (isReady) {
+      const generateCanvas = currentFormat === 'portrait' ? generatePortraitCanvas : generateLandscapeCanvas;
+      void generateCanvas(photos, photoCount, timestamp, selectedColor, stickers).then(url => {
+        if (url) setPreviewUrl(url);
       });
+    }
+  }, [selectedColor, stickers, currentFormat, isReady, photos, photoCount, timestamp]);
+
+  const addSticker = (type: string) => {
+    const newSticker: Sticker = {
+      id: Math.random().toString(),
+      type,
+      x: 0.5,
+      y: 0.5,
+      scale: 1,
+      rotation: 0
     };
-
-    const loadedImages = await Promise.all(photoArray.map(loadImage));
-
-    loadedImages.forEach((img, index) => {
-      const yPos = verticalPadding + (index * (photoHeight + spacing));
-
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-      ctx.shadowBlur = 15;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 5;
-
-      ctx.fillStyle = '#FF6F61';
-      ctx.beginPath();
-      ctx.roundRect(
-        horizontalPadding - 4,
-        yPos - 4,
-        photoWidth + 8,
-        photoHeight + 8,
-        8
-      );
-      ctx.fill();
-
-      ctx.shadowColor = 'transparent';
-      ctx.drawImage(img, horizontalPadding, yPos, photoWidth, photoHeight);
-    });
-
-    const lastPhotoBottom = verticalPadding + (2 * (photoHeight + spacing)) + photoHeight;
-    const remainingSpace = baseHeight - lastPhotoBottom;
-    const textY = lastPhotoBottom + (remainingSpace / 2);
-
-    ctx.fillStyle = '#FF6F61';
-    ctx.beginPath();
-    ctx.arc(baseWidth / 2, textY - 50, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-    ctx.font = 'bold 28px Montserrat';
-    ctx.fillStyle = '#FF6F61';
-    ctx.textAlign = 'center';
-    ctx.fillText('mianna photobooth', baseWidth / 2, textY);
-
-    ctx.font = '16px Montserrat';
-    ctx.fillStyle = '#666666';
-    ctx.fillText(time, baseWidth / 2, textY + 30);
-
-    return canvas.toDataURL('image/png');
+    setStickers(prev => [...prev, newSticker]);
   };
 
-  const generateLandscapeCanvas = async (photoArray: string[], time: string) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
+  const updateStickerPosition = (id: string, x: number, y: number) => {
+    setStickers(prev => prev.map(sticker => 
+      sticker.id === id ? { ...sticker, x, y } : sticker
+    ));
+  };
 
-    const baseWidth = 1600;
-    const baseHeight = 800;
-    const photoWidth = Math.floor((baseWidth - 160) / 3);
-    const photoHeight = Math.floor(photoWidth * (9 / 16));
-    const horizontalPadding = 40;
-    const verticalPadding = 80;
-    const spacing = 40;
+  const updateStickerRotation = (id: string, rotation: number) => {
+    setStickers(prev => prev.map(sticker => 
+      sticker.id === id ? { ...sticker, rotation } : sticker
+    ));
+  };
 
-    canvas.width = baseWidth;
-    canvas.height = baseHeight;
+  const updateStickerScale = (id: string, scale: number) => {
+    setStickers(prev => prev.map(sticker => 
+      sticker.id === id ? { ...sticker, scale } : sticker
+    ));
+  };
 
-    const gradient = ctx.createLinearGradient(0, 0, baseWidth, 0);
-    gradient.addColorStop(0, '#FFE4E9');
-    gradient.addColorStop(1, '#FFD1D9');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, baseWidth, baseHeight);
+  const deleteSticker = (id: string) => {
+    setStickers(prev => prev.filter(sticker => sticker.id !== id));
+  };
 
-    const loadImage = (src: string) => {
-      return new Promise<HTMLImageElement>((resolve) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = () => resolve(img);
-      });
-    };
-
-    const loadedImages = await Promise.all(photoArray.map(loadImage));
-
-    loadedImages.forEach((img, index) => {
-      const xPos = horizontalPadding + (index * (photoWidth + spacing));
-
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-      ctx.shadowBlur = 15;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 5;
-
-      ctx.fillStyle = '#FF6F61';
-      ctx.beginPath();
-      ctx.roundRect(
-        xPos - 4,
-        verticalPadding - 4,
-        photoWidth + 8,
-        photoHeight + 8,
-        8
-      );
-      ctx.fill();
-
-      ctx.shadowColor = 'transparent';
-      ctx.drawImage(img, xPos, verticalPadding, photoWidth, photoHeight);
-    });
-
-    const photosBottom = verticalPadding + photoHeight;
-    const remainingSpace = baseHeight - photosBottom;
-    const textY = photosBottom + (remainingSpace / 2);
-
-    ctx.fillStyle = '#FF6F61';
-    ctx.beginPath();
-    ctx.arc(baseWidth / 2, textY - 50, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-    ctx.font = 'bold 28px Montserrat';
-    ctx.fillStyle = '#FF6F61';
-    ctx.textAlign = 'center';
-    ctx.fillText('mianna photobooth', baseWidth / 2, textY);
-
-    ctx.font = '16px Montserrat';
-    ctx.fillStyle = '#666666';
-    ctx.fillText(time, baseWidth / 2, textY + 30);
-
-    return canvas.toDataURL('image/png');
+  const clearAllStickers = () => {
+    setStickers([]);
   };
 
   const downloadImage = async (format: 'portrait' | 'landscape') => {
-    setCurrentFormat(format);
-    const dataUrl = await (format === 'portrait' 
-      ? generatePortraitCanvas(photos, timestamp)
-      : generateLandscapeCanvas(photos, timestamp)
-    );
-    
-    if (dataUrl) {
-      setPreviewUrl(dataUrl);
+    try {
+      setCurrentFormat(format);
+      const generateCanvas = format === 'portrait' ? generatePortraitCanvas : generateLandscapeCanvas;
+      const dataUrl = await generateCanvas(photos, photoCount, timestamp, selectedColor, stickers);
       
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `mianna_photobooth_${format}.png`;
-      link.click();
+      if (dataUrl) {
+        setPreviewUrl(dataUrl);
+        
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `mianna_photobooth_${format}_${Date.now()}.png`;
+        link.click();
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
     }
   };
 
   const handleNewPhotos = () => {
-    localStorage.removeItem('photos');
-    localStorage.removeItem('timestamp');
-    router.push('/');
+    try {
+      localStorage.removeItem('photos');
+      localStorage.removeItem('timestamp');
+      localStorage.removeItem('photoCount');
+      void router.push('/welcome');
+    } catch (error) {
+      console.error('Error clearing data:', error);
+    }
   };
 
   return (
@@ -217,7 +128,7 @@ export default function ResultPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]"
+      className="flex flex-col items-center justify-center min-h-screen p-8 pb-20 gap-8 sm:p-20"
     >
       <motion.h1 
         initial={{ y: -20 }}
@@ -230,53 +141,95 @@ export default function ResultPage() {
       <motion.p 
         initial={{ y: -20 }}
         animate={{ y: 0 }}
-        className="text-xl text-accent-foreground z-10 max-w-lg mx-auto mt-4 text-center"
+        className="text-xl text-gray-600 max-w-lg mx-auto mt-4 text-center"
       >
-        Your three snapshots are captured—no retakes, just real, fun memories. Now, it&apos;s time to save and share your moments.
+        Your {photoCount} {photoCount === 1 ? 'snapshot is' : 'snapshots are'} captured—no retakes, 
+        just real, fun memories. Now, customize your design and save your moments!
       </motion.p>
 
       {isReady && (
         <motion.div 
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
-          className="mt-8 w-full max-w-4xl"
+          className="w-full max-w-4xl"
         >
           <div className="flex flex-col items-center gap-8">
-            <motion.div 
-              layoutId="preview"
-              className="relative max-w-[90vw] border-4 border-pink-500 rounded-lg overflow-hidden shadow-lg"
+            {/* Preview with Draggable Stickers */}
+            <div 
+              className="relative"
+              ref={previewRef}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="Generated photobooth result"
-                className="w-full h-auto"
-              />
-            </motion.div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  className={`rounded-full py-3 px-10 text-xl font-semibold transition-colors
-                    ${currentFormat === 'portrait' 
-                      ? 'bg-[#FF6F61] text-white hover:bg-[#D45746]' 
-                      : 'bg-pink-100 text-pink-500 hover:bg-pink-200'}`}
-                  onClick={() => downloadImage('portrait')}
-                >
-                  Portrait
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  className={`rounded-full py-3 px-10 text-xl font-semibold transition-colors
-                    ${currentFormat === 'landscape' 
-                      ? 'bg-[#FF6F61] text-white hover:bg-[#D45746]' 
-                      : 'bg-pink-100 text-pink-500 hover:bg-pink-200'}`}
-                  onClick={() => downloadImage('landscape')}
-                >
-                  Landscape
-                </Button>
+              <motion.div 
+                layoutId="preview"
+                className="relative max-w-[90vw] border-4 border-pink-500 rounded-lg overflow-hidden shadow-lg"
+              >
+                <img
+                  src={previewUrl}
+                  alt="Generated photobooth result"
+                  className="w-full h-auto"
+                />
+                {stickers.map(sticker => (
+                  <DraggableSticker
+                    key={sticker.id}
+                    sticker={sticker}
+                    containerRef={previewRef}
+                    onPositionUpdate={updateStickerPosition}
+                    onDelete={deleteSticker}
+                    onRotate={updateStickerRotation}
+                    onScale={updateStickerScale}
+                  />
+                ))}
               </motion.div>
             </div>
+
+            {/* Customization Controls */}
+            <div className="w-full max-w-3xl space-y-6">
+              {/* Color Selection */}
+              <div className="bg-white p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Frame Color</h3>
+                <ColorSelector 
+                  colors={frameColors}
+                  selectedColor={selectedColor}
+                  onColorSelect={setSelectedColor}
+                />
+              </div>
+
+              {/* Stickers */}
+              <div className="bg-white p-6 rounded-xl shadow-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Stickers</h3>
+                  {stickers.length > 0 && (
+                    <Button
+                      onClick={clearAllStickers}
+                      className="text-red-500 hover:text-red-700 flex items-center gap-2"
+                      variant="ghost"
+                    >
+                      <Trash2 size={16} />
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+                <StickerSelector 
+                  stickers={availableStickers}
+                  onStickerSelect={addSticker}
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  Tip: Double-click a sticker to remove it, or drag to reposition. 
+                  Use two fingers to pinch and zoom on mobile.
+                </p>
+              </div>
+
+              {/* Download Options */}
+              <div className="bg-white p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Download Options</h3>
+                <FormatButtons 
+                  currentFormat={currentFormat}
+                  onDownload={downloadImage}
+                />
+              </div>
+            </div>
+
+            {/* Take New Photos Button */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -292,6 +245,26 @@ export default function ResultPage() {
           </div>
         </motion.div>
       )}
+
+      <motion.footer
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.8 }}
+        className="text-center text-gray-600 py-4"
+      >
+        <p>
+          made by{' '}
+          <a
+            href="https://github.com/andriesnrr"
+            className="text-pink-500 hover:text-[#FF6F61] transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            andriesnrr
+          </a>{' '}
+          ❤️
+        </p>
+      </motion.footer>
     </motion.div>
   );
 }
