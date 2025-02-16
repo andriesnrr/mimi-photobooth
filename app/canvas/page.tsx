@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCcw, Camera, RotateCcw, FlipHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface CameraComponentProps {
   onPhotoCapture: (photo: string) => void;
@@ -58,7 +59,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
       }
     };
 
-    initCamera();
+    void initCamera();
 
     return () => {
       mounted = false;
@@ -68,7 +69,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
     };
   }, [facingMode]);
 
-  const getScreenshot = (): string | null => {
+  const getScreenshot = useCallback((): string | null => {
     if (!videoRef.current || !canvasRef.current) return null;
 
     const video = videoRef.current;
@@ -89,7 +90,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
       return canvas.toDataURL('image/jpeg');
     }
     return null;
-  };
+  }, [rotation, isMirrored]);
 
   useEffect(() => {
     if (isCapturing && timeLeft === 0) {
@@ -98,7 +99,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
         onPhotoCapture(photo);
       }
     }
-  }, [isCapturing, timeLeft, onPhotoCapture]);
+  }, [isCapturing, timeLeft, onPhotoCapture, getScreenshot]);
 
   return (
     <div className="relative h-full">
@@ -137,11 +138,11 @@ export default function Canvas() {
     if (savedCount) {
       setPhotoCount(parseInt(savedCount));
     } else {
-      router.push('/welcome');
+      void router.push('/welcome');
     }
   }, [router]);
 
-  const handlePhotoCapture = (photo: string) => {
+  const handlePhotoCapture = useCallback((photo: string) => {
     setPhotos(prev => [...prev, photo]);
     if (currentShot < photoCount) {
       setCurrentShot(prev => prev + 1);
@@ -149,7 +150,7 @@ export default function Canvas() {
     } else {
       setIsCapturing(false);
     }
-  };
+  }, [currentShot, photoCount]);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
@@ -165,36 +166,36 @@ export default function Canvas() {
     };
   }, [isCapturing, timeLeft]);
 
-  const startCountdown = () => {
+  const startCountdown = useCallback(() => {
     setIsCapturing(true);
     setCurrentShot(1);
     setPhotos([]);
     setTimeLeft(3);
-  };
+  }, []);
 
-  const flipCamera = () => {
+  const flipCamera = useCallback(() => {
     setFacingMode(prev => prev === "user" ? "environment" : "user");
-  };
+  }, []);
 
-  const toggleMirror = () => {
+  const toggleMirror = useCallback(() => {
     setIsMirrored(prev => !prev);
-  };
+  }, []);
 
-  const rotateCamera = () => {
+  const rotateCamera = useCallback(() => {
     setRotation(prev => (prev + 90) % 360);
-  };
+  }, []);
 
-  const handleDone = () => {
+  const handleDone = useCallback(async () => {
     if (photos.length === photoCount && typeof window !== 'undefined') {
       try {
         localStorage.setItem('photos', JSON.stringify(photos));
         localStorage.setItem('timestamp', new Date().toLocaleString());
-        router.push('/result');
+        await router.push('/result');
       } catch (error) {
         console.error('Error saving photos:', error);
       }
     }
-  };
+  }, [photos, photoCount, router]);
 
   return (
     <div className="min-h-screen w-full px-4 py-8 md:p-8 lg:p-12 bg-white">
@@ -223,10 +224,13 @@ export default function Canvas() {
             <div className="flex lg:flex-col gap-2 justify-center lg:justify-start overflow-x-auto lg:overflow-x-visible py-2">
               {photos.map((photo, index) => (
                 <div key={index} className="w-24 h-24 md:w-32 md:h-32 lg:w-full lg:h-32 flex-shrink-0">
-                  <img
+                  <Image
                     src={photo}
                     alt={`Preview ${index + 1}`}
+                    width={320}
+                    height={320}
                     className="w-full h-full object-cover rounded-lg border-2 border-pink-500"
+                    unoptimized
                   />
                 </div>
               ))}

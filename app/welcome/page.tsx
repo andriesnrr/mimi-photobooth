@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Camera, Smartphone, Monitor } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 type Format = 'portrait' | 'landscape';
 type StripOption = 1 | 2 | 3 | 4;
@@ -46,13 +46,15 @@ const FormatCard: React.FC<FormatCardProps> = ({
 );
 
 interface StripCardProps {
-  count: StripOption;
-  label: string;
-  description: string;
+  option: {
+    count: StripOption;
+    label: string;
+    description: string;
+  };
   onClick: () => void;
 }
 
-const StripCard: React.FC<StripCardProps> = ({ count, label, description, onClick }) => (
+const StripCard: React.FC<StripCardProps> = ({ option, onClick }) => (
   <motion.button
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
@@ -64,8 +66,8 @@ const StripCard: React.FC<StripCardProps> = ({ count, label, description, onClic
         <Camera className="w-6 h-6 text-white" />
       </div>
       <div>
-        <h3 className="text-xl font-bold text-pink-500 mb-2">{label}</h3>
-        <p className="text-gray-600">{description}</p>
+        <h3 className="text-xl font-bold text-pink-500 mb-2">{option.label}</h3>
+        <p className="text-gray-600">{option.description}</p>
       </div>
     </div>
   </motion.button>
@@ -75,13 +77,17 @@ export default function Welcome() {
   const router = useRouter();
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
-  const handleStripSelection = (count: StripOption) => {
+  const handleStripSelection = useCallback(async (count: StripOption) => {
     if (selectedFormat) {
-      localStorage.setItem('photoCount', count.toString());
-      localStorage.setItem('photoFormat', selectedFormat);
-      router.push('/canvas');
+      try {
+        localStorage.setItem('photoCount', count.toString());
+        localStorage.setItem('photoFormat', selectedFormat);
+        await router.push('/canvas');
+      } catch (error) {
+        console.error('Error saving settings:', error);
+      }
     }
-  };
+  }, [selectedFormat, router]);
 
   const formatOptions = [
     {
@@ -98,28 +104,28 @@ export default function Welcome() {
     }
   ];
 
-  const stripOptions: Array<{ count: StripOption; label: string; description: string }> = [
+  const stripOptions = [
     {
-      count: 1,
+      count: 1 as StripOption,
       label: "Single Shot",
       description: "Perfect for a quick profile picture"
     },
     {
-      count: 2,
+      count: 2 as StripOption,
       label: "Double Strip",
       description: "Before & after moments"
     },
     {
-      count: 3,
+      count: 3 as StripOption,
       label: "Triple Strip",
       description: "Tell a story in three shots"
     },
     {
-      count: 4,
+      count: 4 as StripOption,
       label: "Quad Strip",
       description: "Capture more memories"
     }
-  ];
+  ] as const;
 
   return (
     <div className="min-h-screen w-full px-4 py-8 md:p-8 lg:p-12 bg-white">
@@ -169,9 +175,7 @@ export default function Welcome() {
               {stripOptions.map((option) => (
                 <StripCard
                   key={option.count}
-                  count={option.count}
-                  label={option.label}
-                  description={option.description}
+                  option={option}
                   onClick={() => handleStripSelection(option.count)}
                 />
               ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -26,6 +26,12 @@ export default function ResultPage() {
   const [selectedColor, setSelectedColor] = useState<FrameColor>(frameColors[0]);
   const [stickers, setStickers] = useState<Sticker[]>([]);
 
+  const regenerateCanvas = useCallback(async () => {
+    const generateCanvas = currentFormat === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
+    const url = await generateCanvas(photos, photoCount, timestamp, selectedColor, stickers);
+    if (url) setPreviewUrl(url);
+  }, [currentFormat, photos, photoCount, timestamp, selectedColor, stickers]);
+
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -40,10 +46,7 @@ export default function ResultPage() {
           setCurrentFormat(savedFormat || 'portrait');
           setTimestamp(savedTimestamp || new Date().toLocaleString());
           setIsReady(true);
-
-          const generateCanvas = savedFormat === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
-          const url = await generateCanvas(savedPhotos, savedCount, savedTimestamp || '', selectedColor, stickers);
-          if (url) setPreviewUrl(url);
+          await regenerateCanvas();
         } else {
           await router.push('/');
         }
@@ -54,21 +57,15 @@ export default function ResultPage() {
     };
 
     void loadInitialData();
-  }, [router, selectedColor, stickers]);
-
-  const regenerateCanvas = async () => {
-    const generateCanvas = currentFormat === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
-    const url = await generateCanvas(photos, photoCount, timestamp, selectedColor, stickers);
-    if (url) setPreviewUrl(url);
-  };
+  }, [router, regenerateCanvas]);
 
   useEffect(() => {
     if (isReady) {
       void regenerateCanvas();
     }
-  }, [currentFormat, selectedColor, stickers, isReady]);
+  }, [isReady, regenerateCanvas]);
 
-  const addSticker = (type: string) => {
+  const addSticker = useCallback((type: string) => {
     const newSticker: Sticker = {
       id: Math.random().toString(),
       type,
@@ -78,35 +75,35 @@ export default function ResultPage() {
       rotation: 0
     };
     setStickers(prev => [...prev, newSticker]);
-  };
+  }, []);
 
-  const updateStickerPosition = (id: string, x: number, y: number) => {
+  const updateStickerPosition = useCallback((id: string, x: number, y: number) => {
     setStickers(prev => prev.map(sticker => 
       sticker.id === id ? { ...sticker, x, y } : sticker
     ));
-  };
+  }, []);
 
-  const updateStickerRotation = (id: string, rotation: number) => {
+  const updateStickerRotation = useCallback((id: string, rotation: number) => {
     setStickers(prev => prev.map(sticker => 
       sticker.id === id ? { ...sticker, rotation } : sticker
     ));
-  };
+  }, []);
 
-  const updateStickerScale = (id: string, scale: number) => {
+  const updateStickerScale = useCallback((id: string, scale: number) => {
     setStickers(prev => prev.map(sticker => 
       sticker.id === id ? { ...sticker, scale } : sticker
     ));
-  };
+  }, []);
 
-  const deleteSticker = (id: string) => {
+  const deleteSticker = useCallback((id: string) => {
     setStickers(prev => prev.filter(sticker => sticker.id !== id));
-  };
+  }, []);
 
-  const clearAllStickers = () => {
+  const clearAllStickers = useCallback(() => {
     setStickers([]);
-  };
+  }, []);
 
-  const downloadImage = async (format: 'portrait' | 'landscape') => {
+  const downloadImage = useCallback(async (format: 'portrait' | 'landscape') => {
     try {
       setCurrentFormat(format);
       const generateCanvas = format === 'landscape' ? generateLandscapeCanvas : generatePortraitCanvas;
@@ -123,9 +120,9 @@ export default function ResultPage() {
     } catch (error) {
       console.error('Error downloading image:', error);
     }
-  };
+  }, [photos, photoCount, timestamp, selectedColor, stickers]);
 
-  const handleNewPhotos = async () => {
+  const handleNewPhotos = useCallback(async () => {
     try {
       localStorage.removeItem('photos');
       localStorage.removeItem('timestamp');
@@ -135,7 +132,7 @@ export default function ResultPage() {
     } catch (error) {
       console.error('Error clearing data:', error);
     }
-  };
+  }, [router]);
 
   if (!isReady) {
     return null;
